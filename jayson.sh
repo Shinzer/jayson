@@ -3,43 +3,55 @@
 # Initialize variables
 file=""
 param_string=""
+output_file=""
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -f|--file) file="$2"; shift ;;
         -p|--param) param_string="$2"; shift ;;
+        -o|--output) output_file="$2"; shift ;;
         *) echo "Error: Unknown parameter: $1"; exit 1 ;;
     esac
     shift
 done
 
-# Validation: Check if required arguments are provided
+# Validation
 if [[ -z "$file" || -z "$param_string" ]]; then
-    echo "Usage: ./jayson.sh -f <file.json> -p <param1,param2,...>"
+    echo "Usage: ./jayson.sh -f <file.json> -p <param1,param2> [-o output.txt]"
     exit 1
 fi
 
-# Validation: Check if file exists
 if [[ ! -f "$file" ]]; then
     echo "Error: File '$file' not found."
     exit 1
 fi
 
-# Validation: Check if jq is installed
-if ! command -v jq &> /dev/null; then
-    echo "Error: 'jq' is not installed. Please install it to use this script."
-    exit 1
+# Generate TSV data with headers
+data=$(jq -r --arg p "$param_string" '
+    ($p | split(",")) as $keys |
+    $keys, 
+    (.. | objects | select(has($keys[0])) | [.[$keys[]]]) | 
+    @tsv
+' "$file")
+
+# 1. Handle File Output (Replaces | tee)
+if [[ -n "$output_file" ]]; then
+    echo "$data" > "$output_file"
+    echo "[file] Data saved to $output_file"
 fi
 
-# Execution
-# 1. Split the comma-separated string into a jq array
-# 2. Recursively find objects that contain the first requested key
-# 3. Extract all requested keys into an array and format as TSV
-jq -r --arg p "$param_string" '
-    ($p | split(",")) as $keys |
-    .. | objects | 
-    select(has($keys[0])) | 
-    [ .[$keys[]] ] | 
-    @tsv
-' "$file"
+# 2. Print to terminal
+echo "$data"
+
+# 3. Copy to clipboard
+if command -v pbcopy &> /dev/null; then
+    echo "$data" | pbcopy
+    echo -e "\n[✔] Copied to clipboard. Paste directly into Sheets."
+elif command -v xclip &> /dev/null; then
+    echo "$data" | xclip -selection clipboard
+    echo -e "\n[✔] Copied to clipboard. Paste directly into Sheets."
+elif command -v xsel &> /dev/null; then
+    echo "$data" | xsel --clipboard --input
+    echo -e "\n[✔] Copied to clipboard. Paste directly into Sheets."
+fi
