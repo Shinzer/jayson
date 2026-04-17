@@ -5,4 +5,5 @@
 <img width="798" height="229" alt="image" src="https://github.com/user-attachments/assets/ad1ef47b-066d-481c-90be-6cd4524e9b4b" />
 
 # Commands
-- ```jayson -f 20260405155710_users.json -p 'name'``` | sort | uniq | tee wordlistName.txt
+- ```jayson.sh -f 20260405155710_users.json -p 'name'``` | sort | uniq | tee wordlistName.txt
+- ```jayson.sh -f 20260405155710_users.json -p name,lastlogon,pwdlastset | tee output.txt
