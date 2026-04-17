@@ -10,3 +10,4 @@
 # Commands
 - ```jayson.sh -f 20260405155710_users.json -p 'name' | sort | uniq | tee wordlistName.txt```
 - ```jayson.sh -f 20260405155710_users.json -p name,lastlogon,pwdlastset | tee output.txt```
+- _Can also put results on an output file using -o file.txt_
