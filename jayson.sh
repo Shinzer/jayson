@@ -18,7 +18,7 @@ done
 
 # Validation
 if [[ -z "$file" || -z "$param_string" ]]; then
-    echo "Usage: ./jayson.sh -f <file.json> -p <param1,param2> [-o output.txt]"
+    echo "Usage: jayson -f <file.json> -p <param1,param2> [-o output.txt]"
     exit 1
 fi
 
@@ -27,7 +27,7 @@ if [[ ! -f "$file" ]]; then
     exit 1
 fi
 
-# Generate TSV data with headers
+# 1. Generate TSV (Tab Separated) for spreadsheet pasting
 data=$(jq -r --arg p "$param_string" '
     ($p | split(",")) as $keys |
     $keys, 
@@ -35,23 +35,23 @@ data=$(jq -r --arg p "$param_string" '
     @tsv
 ' "$file")
 
-# 1. Handle File Output (Replaces | tee)
+# 2. Output to file if -o is provided
 if [[ -n "$output_file" ]]; then
     echo "$data" > "$output_file"
-    echo "[file] Data saved to $output_file"
+    echo "[+] Data saved to $output_file"
 fi
 
-# 2. Print to terminal
+# 3. Print to stdout
 echo "$data"
 
-# 3. Copy to clipboard
-if command -v pbcopy &> /dev/null; then
-    echo "$data" | pbcopy
-    echo -e "\n[✔] Copied to clipboard. Paste directly into Sheets."
-elif command -v xclip &> /dev/null; then
+# 4. Clipboard Logic for Linux (Kali)
+# We use -selection clipboard so it goes to the Ctrl+V buffer, not just middle-click
+if command -v xclip &> /dev/null; then
     echo "$data" | xclip -selection clipboard
-    echo -e "\n[✔] Copied to clipboard. Paste directly into Sheets."
+    echo -e "\n[✔] Copied to clipboard via xclip."
 elif command -v xsel &> /dev/null; then
     echo "$data" | xsel --clipboard --input
-    echo -e "\n[✔] Copied to clipboard. Paste directly into Sheets."
+    echo -e "\n[✔] Copied to clipboard via xsel."
+else
+    echo -e "\n[!] ERROR: No clipboard tool found. Run: sudo apt install xclip -y"
 fi
