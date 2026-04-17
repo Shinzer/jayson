@@ -1,23 +1,45 @@
-jayson() {
-    local file=""
-    local param=""
+#!/bin/bash
 
-    # Parse arguments
-    while [[ "$#" -gt 0 ]]; do
-        case $1 in
-            -f|--file) file="$2"; shift ;;
-            -p|--param) param="$2"; shift ;;
-            *) echo "Unknown parameter: $1"; return 1 ;;
-        esac
-        shift
-    done
+# Initialize variables
+file=""
+param_string=""
 
-    # Validation
-    if [[ -z "$file" || -z "$param" ]]; then
-        echo "Usage: jayson -f <file.json> -p <parameter>"
-        return 1
-    fi
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        -f|--file) file="$2"; shift ;;
+        -p|--param) param_string="$2"; shift ;;
+        *) echo "Error: Unknown parameter: $1"; exit 1 ;;
+    esac
+    shift
+done
 
-    # Execution
-    jq -r ".. | .$param? // empty" "$file"
-}
+# Validation: Check if required arguments are provided
+if [[ -z "$file" || -z "$param_string" ]]; then
+    echo "Usage: ./jayson.sh -f <file.json> -p <param1,param2,...>"
+    exit 1
+fi
+
+# Validation: Check if file exists
+if [[ ! -f "$file" ]]; then
+    echo "Error: File '$file' not found."
+    exit 1
+fi
+
+# Validation: Check if jq is installed
+if ! command -v jq &> /dev/null; then
+    echo "Error: 'jq' is not installed. Please install it to use this script."
+    exit 1
+fi
+
+# Execution
+# 1. Split the comma-separated string into a jq array
+# 2. Recursively find objects that contain the first requested key
+# 3. Extract all requested keys into an array and format as TSV
+jq -r --arg p "$param_string" '
+    ($p | split(",")) as $keys |
+    .. | objects | 
+    select(has($keys[0])) | 
+    [ .[$keys[]] ] | 
+    @tsv
+' "$file"
